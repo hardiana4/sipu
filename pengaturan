@@ -1,0 +1,62 @@
+public function update_profil($id, Request $request)
+    {
+        $profil = User::findOrFail($id);
+
+        $validator = Validator::make($request->all(), [
+            'nama'       => 'required',
+            'email'       => 'required|unique:users,email,'.$profil->id,
+        ],
+        [
+            'nama.required' => 'Nama tidak boleh kosong.',
+            'email.required' => 'Email tidak boleh kosong.',
+            'email.unique' => 'Email sudah ada, coba yang lain.',
+        ]);
+         
+        if ($validator->fails()) {
+        return redirect()->back()->withErrors($validator)->withInput();
+        }  
+        
+        $profil->nama = $request->nama;
+        $profil->email = $request->email;
+        $profil->save();
+        return redirect('/pengaturan')->with('success', 'Profil berhasil diubah.');
+    }
+
+    public function update_password(Request $request, $id)
+    {
+        $users = User::findOrFail($id);
+        if(!(Hash::check($request->password_lama, auth()->User()->password))){
+            return back()->with("error", "Password tidak sesuai!");
+        }
+        $validator = Validator::make($request->all(), [
+            'password_lama' => 'required',
+            'password_baru' => [
+                                    'required',
+                                    'string',
+                                    'min:8',             // must be at least 10 characters in length
+                                    'regex:/[a-z]/',      // must contain at least one lowercase letter
+                                    'regex:/[A-Z]/',      // must contain at least one uppercase letter
+                                    'regex:/[0-9]/',      // must contain at least one digit
+                                    'regex:/[@$!%*#?&]/', // must contain a special character
+                                ],
+            'password_konfirmasi' => 'required|same:password_baru',
+        ],
+        [
+            'password_lama.required' => 'Password tidak boleh kosong',
+            'password_baru.required' => 'Password baru tidak boleh kosong!',
+            'password_baru.min' => 'Password baru harus berisi minimal 8 karakter!',
+            'password_baru.regex' => 'Kombinasikan password Anda!',
+            'password_konfirmasi.required' => 'Password konfirmasi tidak boleh kosong!',
+            'password_konfirmasi.same' => 'Password baru dan konfirmasi password harus sama!'
+        ]);
+
+        if ($validator->fails()) {
+        return redirect()->back()->withErrors($validator)->withInput();
+        }
+
+        User::whereId(auth()->User()->id)->update([
+            'password' => Hash::make($request->password_baru)
+        ]);
+    
+        return redirect('pengaturan')->with('success','Password berhasil diubah');
+    }
